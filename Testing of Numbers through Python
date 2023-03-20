@@ -1,0 +1,65 @@
+import pandas as pd
+import numpy as np
+
+#final goal is to test the sum on value ["C18"] according to some conditions. I will try either through df file as well as through a merge among 3 files
+
+df=pd.read_csv("/home/cdsw/input/Riccardo/xxx.csv", header=1, delimiter=";", low_memory=False)
+Position_to_Object=pd.read_csv("/home/cdsw/input/Riccardo/yyy.csv", header=1, delimiter=";", low_memory=False)
+Object=pd.read_csv("/home/cdsw/input/Riccardo/zzz.csv", header=1, delimiter=";", low_memory=False)
+Tabellen=[df, Position_to_Object, Object]
+#files uploaded
+
+for i in Tabellen:
+    for x in i.columns:
+        title=x.split(":")
+        i.rename(columns={x:title[0]}, inplace=True)
+#column titles made easy to read
+
+def replace_nan(x):
+    try:
+        return x.replace(",", ".")
+    except:
+        return x
+
+for i in Tabellen:
+    for x in i.columns:
+        try:
+            i[x]=i[x].apply(replace_nan).astype(float)
+        except:
+            pass
+#"," substituted by "."
+
+Position_to_Object.rename(columns={"POSITION_Identity":"POSITION_ID"}, inplace=True)
+Position_to_Object.rename(columns={"OBJECT_Identity":"OBJECT_ID"}, inplace=True)
+Position_to_Position.rename(columns={"POSITION_Identity":"POSITION_ID"}, inplace=True)
+#rename to make merging easy
+
+Ergebnisdaten=df
+#df is the most used file. I make a "copy" of that to not touch it
+
+merge1=pd.merge(Position_to_Object, Object, how="left", on=["OBJECT_ID"])
+merge2=pd.merge(merge1, Ergebnisdaten, how="left", on=["POSITION_ID"])
+merge2.drop_duplicates(subset=['OBJECT_ID_x'], inplace=True)
+merge2.drop_duplicates(subset=['OBJECT_ID_y'], inplace=True)
+#merging
+
+y=merge2[(merge2["PCR033"]>0.9) & (merge2["PCR033"]<=1) & (merge2["MAT106"]=="(1) Ja")][["C18_y", "POSITION_ID"]]
+y["C18_y"].astype(float).sum()
+#calculate the value after merging
+
+dfy=df[(df["PCR033"]>0.9) & (df["PCR033"]<=1) & (df["MAT106"]=="(1) Ja")][["C18", "POSITION_ID", "OBJECT_ID"]]
+dfy.drop_duplicates(subset=['OBJECT_ID'], inplace=True)
+dfy["C18"].astype(float).sum()
+#calculate the value without merging
+
+Positionen_y=[]
+Positionen_df=[]
+for i in y["POSITION_ID"]:
+    Positionen_y.append(i)
+for i in dfy["POSITION_ID"]:
+    Positionen_df.append(i)
+difference1=[]
+for i in Positionen_df:
+    if i not in Positionen_y:
+        difference1.append(i)
+difference1
